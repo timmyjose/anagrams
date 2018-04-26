@@ -1,14 +1,15 @@
 module Main where
 
-import System.Environment
-
+import System.Environment (getArgs)
+import System.Directory (doesFileExist)
+import System.Process (createProcess, readProcess)
+import System.IO.Unsafe (unsafePerformIO)
 import Data.List (sort, sortBy, groupBy)
 
-import Io (mkfname, writetofile)
-import Lib (srtwrds, lwrwrds, srtprs, grpprs, fltrgrps, gatherangms, getpairs)
+import Io (isempty, mkfname, writetofile)
+import Lib (anagrams)
 
 {--
-
 
 
 --}
@@ -16,43 +17,43 @@ import Lib (srtwrds, lwrwrds, srtprs, grpprs, fltrgrps, gatherangms, getpairs)
 main :: IO ()
 main =
   do
-    putStrLn ""
+    let fw = "./data/words-dwyl.txt"
+    let fa = "./data/anagrams.txt"
+    if ( (unsafePerformIO $ doesFileExist fa) && (not . unsafePerformIO $ isempty fa) ) then
+      do
+        return ()
+    else
+      do
+        contents <- readFile fw
+        writeFile fa $ anagrams contents
+        return ()
 
-    --jumble <- getLine
+    procinputs fa
 
-    let dirname = "./data/"
-    let prefix = "words"
-    let extn = ".txt"
+procinputs :: String -> IO ()
+procinputs fa =
+  do
+    putStrLn "\nEnter a word for which you want anagrams: "
+    [option] <- getArgs
 
-    contents <- readFile "./data/words-dwyl.txt"
-    --contents <- readFile "./data/words-mac.txt"
+    if option == "-i" then
+      do
+        jumble <- getLine
 
-    let ws = lines contents
+        if (not . null) jumble then
+          do
+            as <- readProcess "grep" ["-iw", jumble, fa] ""
+            putStrLn ("\nAnagrams of " ++ jumble ++ " are: " ++ as)
+            procinputs fa
+        else
+          do
+            return ()
+    else
+      do
+        return ()
 
-    let pairs = getpairs ws
-    --putStrLn ("pairs = " ++ show (take 60 pairs))
-    --writeFile "./data/out-pairs.txt" (show pairs)
 
-    let grpspairs = fltrgrps $ grpprs $ srtprs pairs
-    --writeFile "./data/out-grpspairs.txt" (show grpspairs)
-
-    let agms = gatherangms grpspairs
-    --putStrLn ("agms = " ++ take 600 agms)
-
-    writeFile "./data/out.txt" agms
-
-    --let lenwords = sort $ nub $ map length ws
-    --putStrLn ("lenwords = " ++ show lenwords)
-    --let wdist = fromJust $ tailMay $ distwords $ ws   --- Omit single-letter words.
-    --putStrLn ("wdist = " ++ show (take 6 $ fromJust $ headMay wdist))
-    --let lwords = wdist !! ( (length jumble) -2 ) --- Take only words whose length is the same as that of the jumbled word.
-    --putStrLn ("lwords = " ++ show (take 6 lwords))
-    --let agms = concat $ map (++ " ") $ getagms jumble lwords
-    --putStrLn ("Anagrams of " ++ jumble ++ ": " ++ agms)
-    --let fnames = map (mkfname prefix extn) $ lenwords
-    --putStrLn ("fnames = " ++ show fnames)
-    --sequence $ map writetofile $ wdist
-
-    --main
-
-    return ()
+---     let dirname = "./data/"
+---     let prefix = "words"
+---     let extn = ".txt"
+---

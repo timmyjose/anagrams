@@ -1,4 +1,13 @@
-module Io(mkfname, writetofile) where
+module Io(isempty, mkfname, writetofile) where
+
+import System.IO
+
+isempty :: FilePath -> IO Bool
+isempty fp =
+  do
+    sz <- withFile fp ReadMode hFileSize
+    return (sz == 0)
+
 
 mkfname :: String -> String -> Int -> String
 mkfname _ _ 0 = ""
