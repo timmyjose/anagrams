@@ -2,9 +2,10 @@ module Main where
 
 import System.Environment (getArgs)
 import System.Directory (doesFileExist)
-import System.Process (createProcess, readProcess)
+import System.Process.Typed (ProcessConfig, proc, readProcess)
 import System.IO.Unsafe (unsafePerformIO)
 import Data.List (sort, sortBy, groupBy)
+import qualified Data.ByteString.Lazy.Char8 as BS8
 
 import Io (isempty, mkfname, writetofile)
 import Lib (anagrams)
@@ -33,8 +34,9 @@ main =
 procinputs :: String -> IO ()
 procinputs fa =
   do
-    putStrLn "\nEnter a word for which you want anagrams: "
+    putStrLn "\nType in a word:"
     [option] <- getArgs
+    --putStrLn ("\noption = " ++ option)
 
     if option == "-i" then
       do
@@ -42,12 +44,20 @@ procinputs fa =
 
         if (not . null) jumble then
           do
-            as <- readProcess "grep" ["-iw", jumble, fa] ""
-            putStrLn ("\nAnagrams of " ++ jumble ++ " are: " ++ as)
-            procinputs fa
+            let prcs :: ProcessConfig () () ()
+                prcs = proc "grep" ["-iw", jumble, fa]
+            (cdExit, stdout, stderr) <- readProcess prcs
+            if show cdExit == "ExitSuccess" then
+              putStrLn $ concat $ map (++ " ") $ filter (/= jumble) $ words $ BS8.unpack stdout
+            else if show cdExit == "ExitFailure 1" then
+              putStr ""
+            else
+              putStrLn $ show cdExit
         else
           do
             return ()
+
+        procinputs fa
     else
       do
         return ()
