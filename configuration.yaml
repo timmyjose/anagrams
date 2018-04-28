@@ -1,0 +1,6 @@
+# configuration.yaml
+
+fplexicon:       "words-dwyl.txt"
+fpanagrams:      "anagrams.txt"
+directory:       "./data/"
+extnfile:        ".txt"

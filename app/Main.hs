@@ -1,14 +1,17 @@
 module Main where
 
-import System.Environment (getArgs)
-import System.Directory (doesFileExist)
-import System.Process.Typed (ProcessConfig, proc, readProcess)
-import System.IO.Unsafe (unsafePerformIO)
-import Data.List (sort, sortBy, groupBy)
-import qualified Data.ByteString.Lazy.Char8 as BS8
+import           System.Environment (getArgs)
+import           System.Directory (doesFileExist)
+import           System.Process.Typed (ProcessConfig, proc, readProcess)
+import           System.IO.Unsafe (unsafePerformIO)
+import           Data.List (sort, sortBy, groupBy)
+import           Data.Maybe (fromJust)
+import qualified Data.ByteString.Char8 as DBC8
+import qualified Data.ByteString.Lazy.Char8 as DBLC8
 
 import Io (isempty, mkfname, writetofile)
 import Lib (anagrams)
+import ParserConf (getconf, getfplxcn, getfpangms, getextnfile, getfpdir)
 
 {--
 
@@ -16,23 +19,39 @@ import Lib (anagrams)
 --}
 
 main :: IO ()
-main =
-  do
-    let fw = "./data/words-dwyl.txt"
-    let fa = "./data/anagrams.txt"
-    if ( (unsafePerformIO $ doesFileExist fa) && (not . unsafePerformIO $ isempty fa) ) then
-      do
-        return ()
-    else
-      do
-        contents <- readFile fw
-        writeFile fa $ anagrams contents
-        return ()
-
-    procinputs fa
+main = do
+  putStrLn ""
+  contents <- DBC8.readFile "configuration.yaml"
+  let conf = getconf contents
+  --putStrLn ("conf = " ++ show conf)
+  let fpa = getfpdir conf ++ getfpangms conf
+  putStrLn ("fpa = " ++ fpa)
+  if (  --- Checks whether the anagrams are available.
+       (unsafePerformIO $ doesFileExist fpa) &&
+       (not . unsafePerformIO $ isempty fpa)
+    ) then do
+    procinputs fpa
+  else
+    do
+      putStrLn "Anagrams are absent! Attempting to generate."
+      let fpl = getfpdir conf ++ getfplxcn conf
+      putStrLn ("fpl = " ++ fpl)
+      if (  --- Checks whether the lexicon is available.
+           (unsafePerformIO $ doesFileExist fpl) &&
+           (not . unsafePerformIO $ isempty fpl)
+        ) then
+        do
+          contents <- readFile fpl
+          writeFile fpa $ anagrams contents
+          putStrLn "Anagrams generated."
+          procinputs fpa
+      else
+        do
+          putStrLn ("Lexicon is absent! Cannot generate anagrams.")
+          return ()
 
 procinputs :: String -> IO ()
-procinputs fa =
+procinputs fpa =
   do
     putStrLn "\nType in a word:"
     [option] <- getArgs
@@ -45,10 +64,10 @@ procinputs fa =
         if (not . null) jumble then
           do
             let prcs :: ProcessConfig () () ()
-                prcs = proc "grep" ["-iw", jumble, fa]
+                prcs = proc "grep" ["-iw", jumble, fpa]
             (cdExit, stdout, stderr) <- readProcess prcs
             if show cdExit == "ExitSuccess" then
-              putStrLn $ concat $ map (++ " ") $ filter (/= jumble) $ words $ BS8.unpack stdout
+              putStrLn $ concat $ map (++ " ") $ filter (/= jumble) $ words $ DBLC8.unpack stdout
             else if show cdExit == "ExitFailure 1" then
               putStr ""
             else
@@ -56,14 +75,7 @@ procinputs fa =
         else
           do
             return ()
-
-        procinputs fa
+        procinputs fpa
     else
       do
         return ()
-
-
----     let dirname = "./data/"
----     let prefix = "words"
----     let extn = ".txt"
----
